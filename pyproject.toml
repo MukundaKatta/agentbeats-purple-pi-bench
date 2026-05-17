@@ -1,0 +1,17 @@
+[project]
+name = "agentbeats-purple-pi-bench"
+version = "0.1.0"
+description = "An A2A-compatible purple agent built for AgentBeats — designed for policy-compliance benchmarks like Pi-Bench. Includes structured reasoning, restraint defaults, and explainable verdicts."
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Mukunda Katta" }]
+dependencies = [
+  "a2a-sdk[http-server]>=0.3.20",
+  "litellm>=1.60",
+  "python-dotenv>=1.0",
+  "uvicorn>=0.30",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
