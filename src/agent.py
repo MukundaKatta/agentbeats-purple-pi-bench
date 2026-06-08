@@ -100,7 +100,11 @@ class Agent:
 
         # Normalize: every output must have action, arguments, reasoning.
         if not isinstance(result, dict):
-            result = {"action": "refuse", "arguments": {}, "reasoning": "Malformed model output"}
+            result = {
+                "action": "refuse",
+                "arguments": {},
+                "reasoning": "Malformed model output",
+            }
         result.setdefault("action", "respond")
         result.setdefault("arguments", {})
         result.setdefault("reasoning", "No explicit reasoning emitted.")

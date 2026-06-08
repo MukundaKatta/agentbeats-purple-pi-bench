@@ -11,7 +11,9 @@ from executor import Executor
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run the policy-compliant purple agent.")
+    parser = argparse.ArgumentParser(
+        description="Run the policy-compliant purple agent."
+    )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=9020)
     parser.add_argument("--card-url", default=None)

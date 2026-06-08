@@ -4,7 +4,7 @@ from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.server.tasks import TaskUpdater
 from a2a.types import InvalidRequestError, TaskState
-from a2a.utils import new_task
+from a2a.utils import new_agent_text_message, new_task
 from a2a.utils.errors import ServerError
 
 from agent import Agent
@@ -25,7 +25,9 @@ class Executor(AgentExecutor):
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         msg = context.message
         if not msg:
-            raise ServerError(error=InvalidRequestError(message="Missing message in request"))
+            raise ServerError(
+                error=InvalidRequestError(message="Missing message in request")
+            )
 
         task = context.current_task
         if task and task.status.state in TERMINAL_STATES:
@@ -53,7 +55,9 @@ class Executor(AgentExecutor):
             if not updater._terminal_state_reached:
                 await updater.complete()
         except Exception as e:
-            await updater.fail(message=f"executor: {type(e).__name__}: {e}")
+            await updater.failed(
+                message=new_agent_text_message(f"executor: {type(e).__name__}: {e}")
+            )
 
     async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
         raise ServerError(

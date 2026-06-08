@@ -4,8 +4,9 @@ Boots the Agent class with the litellm call mocked and asserts the artifact
 sent to the TaskUpdater has the three required fields: action, arguments,
 reasoning. No network, no real API keys.
 
-The test pins fake `a2a.*` stubs into sys.modules before importing the agent
-so it runs against whatever a2a-sdk version is installed (or even none).
+The test uses the real a2a-sdk when a compatible version is installed, and
+otherwise falls back to minimal `a2a.*` stubs pinned into sys.modules. That
+way it runs against whatever a2a-sdk version is present (or even none).
 """
 
 import asyncio
@@ -15,6 +16,20 @@ import types
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
+
+
+def _real_a2a_available():
+    """True if a real a2a-sdk exposing the symbols src/agent.py needs is importable."""
+    try:
+        from a2a.server.tasks import TaskUpdater  # noqa: F401
+        from a2a.types import DataPart, Message, Part, TaskState  # noqa: F401
+        from a2a.utils import (  # noqa: F401
+            get_message_text,
+            new_agent_text_message,
+        )
+    except Exception:
+        return False
+    return True
 
 
 def _install_a2a_stubs():
@@ -71,7 +86,11 @@ def _install_a2a_stubs():
     sys.modules["a2a.utils"] = a2a_utils
 
 
-_install_a2a_stubs()
+# Prefer the real a2a-sdk when it's installed and compatible (so the test
+# exercises the actual SDK surface src/agent.py depends on). Fall back to
+# stubs only when no compatible a2a-sdk is importable.
+if not _real_a2a_available():
+    _install_a2a_stubs()
 
 # Make `src/` importable the same way the Dockerfile entrypoint does.
 SRC = Path(__file__).resolve().parents[1] / "src"
@@ -106,9 +125,7 @@ def _mock_completion(*_args, **_kwargs):
         "reasoning": "Permitted by policy section 1.",
     }
     return SimpleNamespace(
-        choices=[
-            SimpleNamespace(message=SimpleNamespace(content=json.dumps(payload)))
-        ]
+        choices=[SimpleNamespace(message=SimpleNamespace(content=json.dumps(payload)))]
     )
 
 
@@ -116,8 +133,10 @@ def test_agent_emits_action_arguments_reasoning():
     fake_msg = _FakeMessage()
     updater = _FakeUpdater()
 
-    with patch.object(agent_module.litellm, "completion", side_effect=_mock_completion), \
-         patch.object(agent_module, "get_message_text", return_value="hello"):
+    with (
+        patch.object(agent_module.litellm, "completion", side_effect=_mock_completion),
+        patch.object(agent_module, "get_message_text", return_value="hello"),
+    ):
         agent = Agent()
         asyncio.run(agent.run(fake_msg, updater))
 
@@ -145,8 +164,10 @@ def test_agent_refuses_on_provider_error():
     def _boom(*_a, **_k):
         raise RuntimeError("provider down")
 
-    with patch.object(agent_module.litellm, "completion", side_effect=_boom), \
-         patch.object(agent_module, "get_message_text", return_value="hello"):
+    with (
+        patch.object(agent_module.litellm, "completion", side_effect=_boom),
+        patch.object(agent_module, "get_message_text", return_value="hello"),
+    ):
         agent = Agent()
         asyncio.run(agent.run(fake_msg, updater))
 
